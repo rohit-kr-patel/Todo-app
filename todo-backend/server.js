@@ -17,7 +17,7 @@ app.use(express.json());
 const isNonEmpty = (v) => typeof v === 'string' && v.trim().length > 0;
 
 // --- Database Connection ---
-const pool = await mysql.createPool({
+const pool =  mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -269,6 +269,4 @@ app.put("/items/:id/complete", auth, async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT, () =>
-  console.log('API running on http://localhost:' + process.env.PORT)
-)
+export default app;
