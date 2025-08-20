@@ -19,6 +19,7 @@ const isNonEmpty = (v) => typeof v === 'string' && v.trim().length > 0;
 // --- Database Connection ---
 const pool = await mysql.createPool({
   host: process.env.DB_HOST,
+  port: process.env.DB_PORT || 3306, // Use DB_PORT if set, otherwise default to 3306
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
@@ -270,5 +271,5 @@ app.put("/items/:id/complete", auth, async (req, res) => {
 });
 
 app.listen(process.env.PORT, () =>
-  console.log('API running on http://localhost:' + process.env.PORT)
+  console.log('API running on http://localhost:' + process.env.PORT || 5000)
 )
