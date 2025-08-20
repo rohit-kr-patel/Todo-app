@@ -1,5 +1,5 @@
 // API client for communicating with backend endpoints
-const API_BASE_URL = "http://localhost:5000"; // Backend base URL
+const API_BASE_URL = "https://todo-app-safw.onrender.com"; // Backend base URL
 
 // Helper: Get Authorization header if user is logged in
 function getAuthHeader() {
