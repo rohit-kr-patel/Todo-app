@@ -4,6 +4,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
 import bcrypt from 'bcrypt';
+import path from 'path';
+import fs from 'fs';
+
 import jwt from 'jsonwebtoken';
 
 dotenv.config();
