@@ -1,17 +1,15 @@
 // --- Import required modules ---
-import express from 'express'; 
+import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv'; 
-import fs from 'fs'; 
-import path from 'path'; 
-import mysql from 'mysql2/promise'; 
-import bcrypt from 'bcrypt'; 
+import dotenv from 'dotenv';
+import mysql from 'mysql2/promise';
+import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-dotenv.config(); 
-const app = express(); 
-app.use(cors()); 
-app.use(express.json()); 
+dotenv.config();
+const app = express();
+app.use(cors());
+app.use(express.json());
 
 // Helper: check if a string is non-empty
 const isNonEmpty = (v) => typeof v === 'string' && v.trim().length > 0;
@@ -19,27 +17,20 @@ const isNonEmpty = (v) => typeof v === 'string' && v.trim().length > 0;
 // --- Database Connection ---
 const pool = await mysql.createPool({
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT || 3306, // Use DB_PORT if set, otherwise default to 3306
+  port: process.env.DB_PORT || 3306,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 });
-
-// --- Static File Hosting for Avatars ---
-const uploadsDir = path.resolve(process.cwd(), 'uploads');
-const avatarsDir = path.join(uploadsDir, 'avatars');
-if (!fs.existsSync(avatarsDir)) {
-  fs.mkdirSync(avatarsDir, { recursive: true });
-}
-app.use('/uploads', express.static(uploadsDir)); // Serve uploaded files
 
 // --- JWT Authentication Middleware ---
 const auth = async (req, res, next) => {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return res.status(401).json({ message: 'No token' });
+
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET); // Attach user info to request
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
   } catch {
     res.status(401).json({ message: 'Invalid token' });
@@ -77,7 +68,7 @@ app.post('/create', async (req, res) => {
 });
 
 // Root endpoint: health check
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.send('Welcome to the Todo API');
 });
 
@@ -94,11 +85,9 @@ app.post('/login', async (req, res) => {
     if (!rows.length) return res.status(401).json({ message: 'Invalid credentials' });
 
     const user = rows[0];
-    // Check password
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
 
-    // Create JWT token
     const token = jwt.sign({ id: user.id, email: email.trim() }, process.env.JWT_SECRET, { expiresIn: '7d' });
     return res.json({ message: 'Login successful', token });
   } catch (err) {
@@ -107,7 +96,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Logout: just a placeholder (JWT is stateless)
+// Logout: placeholder
 app.post('/logout', async (_req, res) => {
   return res.json({ message: 'Logout successful' });
 });
@@ -117,21 +106,17 @@ app.get('/me', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     const [rows] = await pool.execute(
-      'SELECT id, fn, ln, email, avatar FROM users WHERE id = ?',
+      'SELECT id, fn, ln, email FROM users WHERE id = ?',
       [userId]
     );
     if (!rows.length) return res.status(404).json({ message: 'User not found' });
     const me = rows[0];
-    // Attach avatar URL if exists
-    const avatarPath = path.join(avatarsDir, `${userId}.png`);
-    if (fs.existsSync(avatarPath)) {
-      me.avatarUrl = `/uploads/avatars/${userId}.png`;
-    }
     return res.json(me);
   } catch (err) {
     console.error('GET /me error:', err);
-
-  }})
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // Update current user profile
 app.put('/me', auth, async (req, res) => {
@@ -149,26 +134,6 @@ app.put('/me', auth, async (req, res) => {
     return res.json({ message: 'Profile updated' });
   } catch (err) {
     console.error('PUT /me error:', err);
-    return res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Upload/replace avatar for current user (expects base64 data URL in { data })
-app.put('/me/avatar', auth, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { data } = req.body || {};
-    if (!isNonEmpty(data)) return res.status(400).json({ message: 'Image data required' });
-    const base64 = data.replace(/^data:image\/[a-zA-Z]+;base64,/, '');
-    const buffer = Buffer.from(base64, 'base64');
-    const filePath = path.join(avatarsDir, `${userId}.png`);
-    fs.writeFileSync(filePath, buffer);
-    // Store image path in DB
-    const avatarPath = `/uploads/avatars/${userId}.png`;
-    await pool.execute('UPDATE users SET avatar = ? WHERE id = ?', [avatarPath, userId]);
-    return res.json({ message: 'Avatar updated', avatarUrl: avatarPath });
-  } catch (err) {
-    console.error('PUT /me/avatar error:', err);
     return res.status(500).json({ message: 'Server error' });
   }
 });
@@ -193,6 +158,8 @@ app.put('/me/password', auth, async (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 });
+
+// Get all todos
 app.get('/items', auth, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -207,6 +174,7 @@ app.get('/items', auth, async (req, res) => {
   }
 });
 
+// Create a todo
 app.post('/items', auth, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -224,8 +192,7 @@ app.post('/items', auth, async (req, res) => {
   }
 });
 
-
-// DELETE a todo by ID
+// Delete a todo
 app.delete("/items/:id", auth, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
@@ -247,8 +214,7 @@ app.delete("/items/:id", auth, async (req, res) => {
   }
 });
 
-
-
+// Mark todo complete
 app.put("/items/:id/complete", auth, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
@@ -270,6 +236,7 @@ app.put("/items/:id/complete", auth, async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT, () =>
-  console.log('API running on http://localhost:' + process.env.PORT || 5000)
-)
+// Start server
+app.listen(process.env.PORT || 5000, () =>
+  console.log('API running on port ' + (process.env.PORT || 5000))
+);
