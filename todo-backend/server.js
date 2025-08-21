@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use('/uploads/avatars', express.static(path.resolve(process.cwd(), 'uploads', 'avatars')));
+
 
 
 // Helper: check if a string is non-empty
@@ -108,7 +108,7 @@ app.get('/me', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     const [rows] = await pool.execute(
-      'SELECT id, fn, ln, email,avatar FROM users WHERE id = ?',
+      'SELECT id, fn, ln, email FROM users WHERE id = ?',
       [userId]
     );
     if (!rows.length) return res.status(404).json({ message: 'User not found' });
@@ -120,32 +120,6 @@ app.get('/me', auth, async (req, res) => {
   }
 });
 
-app.put('/me/avatar', auth, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { data } = req.body || {};
-    if (!data) return res.status(400).json({ message: 'Image data required' });
-
-    // Convert base64 to buffer
-    const base64 = data.replace(/^data:image\/[a-zA-Z]+;base64,/, '');
-    const buffer = Buffer.from(base64, 'base64');
-
-    // Save file
-    const uploadsDir = path.resolve(process.cwd(), 'uploads', 'avatars');
-    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-    const filePath = path.join(uploadsDir, `${userId}.png`);
-    fs.writeFileSync(filePath, buffer);
-
-    // Save URL in DB
-    const avatarPath = `/uploads/avatars/${userId}.png`;
-    await pool.execute('UPDATE users SET avatar = ? WHERE id = ?', [avatarPath, userId]);
-
-    return res.json({ message: 'Avatar updated', avatar: avatarPath });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Server error' });
-  }
-});
 
 
 // Update current user profile
