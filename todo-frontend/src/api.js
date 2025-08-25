@@ -1,5 +1,5 @@
 // API client for communicating with backend endpoints
-const API_BASE_URL = "https://todo-app-safw.onrender.com"; // Backend base URL
+const API_BASE_URL = "http://localhost:5000"; // Backend base URL
 
 // Helper: Get Authorization header if user is logged in
 function getAuthHeader() {
@@ -42,7 +42,25 @@ async function apiRequest(path, method = "GET", body = null) {
   return res.json();
 }
 
-// Simple wrappers for common HTTP methods
+// --- Chatbot API ---
+export async function apiChat(message) {
+  if (!message) throw new Error("Message is required");
+  return apiPost("/api/chat", { message });
+}
+
+// --- Pending tasks API ---
+export async function getPendingTasks() {
+  try {
+    // Send "pending todo" message to chatbot endpoint
+    const res = await apiPost("/api/chat", { message: "pending todo" });
+    return res.reply; // backend already formats the pending tasks text
+  } catch (err) {
+    console.error("Failed to fetch pending tasks:", err);
+    throw new Error("Unable to fetch pending tasks");
+  }
+}
+
+// --- Simple wrappers for common HTTP methods ---
 export function apiGet(path) {
   return apiRequest(path, "GET");
 }
@@ -59,7 +77,7 @@ export function apiDelete(path) {
   return apiRequest(path, "DELETE");
 }
 
-// All backend endpoints used in the app
+// --- All backend endpoints used in the app ---
 export const endpoints = {
   register: "/create",            // Create new user
   login: "/login",                // Login user
@@ -72,7 +90,7 @@ export const endpoints = {
   avatar: "/me/avatar",           // Update avatar
 };
 
-// Expose base URL for reference
+// --- Expose base URL for reference ---
 export function getApiBaseUrl() {
   return API_BASE_URL;
 }

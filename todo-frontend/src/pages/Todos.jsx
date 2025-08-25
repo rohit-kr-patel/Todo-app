@@ -5,6 +5,7 @@ import { apiGet, endpoints } from "../api.js"
 import { useAuth } from "../auth.jsx"
 import { useTodos } from "../contexts/TodoContext.jsx"
 import Navbar from "../components/Navbar.jsx"
+import Chatbot from "../components/ChatBot.jsx"
 
 export default function Todos() {
   const { logout, email } = useAuth()
@@ -110,6 +111,7 @@ export default function Todos() {
           )}
         </div>
       </div>
+      <Chatbot/>
     </div>
   )
 }
